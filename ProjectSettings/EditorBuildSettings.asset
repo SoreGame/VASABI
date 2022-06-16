@@ -7,11 +7,11 @@ EditorBuildSettings:
   m_Scenes:
   - enabled: 1
     path: Assets/Scenes/MainMenu.unity
-    guid: c09f4b0b2a9226946aa44a3dd8ffdfa6
+    guid: 829a86ba161cdd840842063447f41aab
   - enabled: 1
     path: Assets/Scenes/FirstRoom.unity
     guid: 9ed92c49bf9648745a60bcabe2d022e0
   - enabled: 1
-    path: Assets/Scenes/MaximK.unity
-    guid: a317817ba05eb3649ac3933fe18471dd
+    path: Assets/Test Blender Scene.unity
+    guid: 7b555100cc0e54a4fb38fd36d3b0d0f0
   m_configObjects: {}

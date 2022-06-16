@@ -18,6 +18,10 @@ TagManager:
   - LaserTrigger
   - CorrectPlate
   - SceneChanger
+  - Sector
+  - RotateTrigger
+  - NumberPuzzleLever
+  - ItemSlot
   layers:
   - Default
   - TransparentFX

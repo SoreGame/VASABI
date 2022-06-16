@@ -43,11 +43,11 @@ public class GameMenuController : MonoBehaviour
         }
 
         RedKey.text = "" + _keysDictionary["Red"];
-        GreenKey.text = "" + _keysDictionary["Green"]; ;
-        BlueKey.text = "" + _keysDictionary["Blue"]; ;
-        YellowKey.text = "" + _keysDictionary["Yellow"]; ;
-        PinkKey.text = "" + _keysDictionary["Pink"]; ;
-        WhiteKey.text = "" + _keysDictionary["White"]; ;
+        GreenKey.text = "" + _keysDictionary["Green"];
+        BlueKey.text = "" + _keysDictionary["Blue"];
+        YellowKey.text = "" + _keysDictionary["Yellow"];
+        PinkKey.text = "" + _keysDictionary["Pink"];
+        WhiteKey.text = "" + _keysDictionary["White"];
     }   
 
     public void UpdateKeyAmountOnHUD(string color, bool isIncrement)

@@ -2,22 +2,26 @@ using Mirror;
 using UnityEngine;
 using System.Collections.Generic;
 
+// Agent script requires the player GameObject to have a CharacterController and mount point for camera. 
+[RequireComponent(
+    typeof(CharacterController), 
+    typeof(GameObject))]
 public class Agent : NetworkBehaviour
 {
     public CharacterController Controller;
-    public GameObject ÑameraMountPoint;
+    public GameObject CameraMountPoint;
     public float Speed = 5f;
     public float Gravity;
 
     [SerializeField] internal List<string> _keys = new List<string>();
-    internal bool _offLaserFlag = false;
-    internal bool _useDoorFlag = false;
-    internal bool _keyDoorFlag = false;
-    internal bool _anyKeyPicked = false;
+    public bool DisableLaserFlag { get; set; }
+    public bool UseDoorFlag { get; set; }
+    public bool KeyDoorFlag { get; set; }
+    public bool AnyKeyPicked { get; private set; }
 
     private GameMenuController _gameMenuController;
     private Vector3 _velocity;
-    private bool _isOpening = false;
+    private bool _isOpening;
     private Light _flashlight;
     private Animator _animator;
 
@@ -27,12 +31,14 @@ public class Agent : NetworkBehaviour
         {
             _gameMenuController = GetComponentInChildren<GameMenuController>();
             _animator = GetComponent<Animator>();
-            SkinnedMeshRenderer[] skinnedMeshRenderer = gameObject.GetComponentsInChildren<SkinnedMeshRenderer>();
-            foreach (SkinnedMeshRenderer renderer in skinnedMeshRenderer)
-                renderer.enabled = false;
-            Transform cameraTransform = Camera.main.gameObject.transform;
-            cameraTransform.parent = ÑameraMountPoint.transform;
-            cameraTransform.SetPositionAndRotation(ÑameraMountPoint.transform.position, ÑameraMountPoint.transform.rotation);
+
+            var skinnedMeshRenderer = gameObject.GetComponentsInChildren<SkinnedMeshRenderer>();
+            foreach (var meshRenderer in skinnedMeshRenderer)
+                meshRenderer.enabled = false;
+            
+            var cameraTransform = Camera.main.gameObject.transform;
+            cameraTransform.parent = CameraMountPoint.transform;
+            cameraTransform.SetPositionAndRotation(CameraMountPoint.transform.position, CameraMountPoint.transform.rotation);
             cameraTransform.gameObject.AddComponent<MouseLook>();
             cameraTransform.gameObject.GetComponent<Camera>().cullingMask = ~(1 << 8 | 1 << 7);
             _flashlight = GetComponentInChildren<Light>();
@@ -46,15 +52,15 @@ public class Agent : NetworkBehaviour
             if (_velocity.y < 0)
                 _velocity.y = -2f;
 
-            float x = Input.GetAxis("Horizontal");
-            float z = Input.GetAxis("Vertical");
+            var x = Input.GetAxis("Horizontal");
+            var z = Input.GetAxis("Vertical");
             Move(x, z);
 
             _velocity.y += Gravity * Time.deltaTime;
             Controller.Move(Speed * Time.deltaTime * _velocity);
             
             if (Input.GetButtonDown("Use") &&
-                (_useDoorFlag || _keyDoorFlag || _offLaserFlag))
+                (UseDoorFlag || KeyDoorFlag || DisableLaserFlag))
             {
                 _isOpening = !_isOpening;
             }
@@ -66,26 +72,27 @@ public class Agent : NetworkBehaviour
 
     private void Move(float x, float z)
     {
-        Vector3 move = transform.right * x + transform.forward * z;
+        var objectTransform = gameObject.transform;
+        var move = objectTransform.right * x + objectTransform.forward * z;
         Controller.Move(Speed * Time.deltaTime * move);
-        _animator.SetFloat("X", x); 
-        _animator.SetFloat("Z", z);
+        _animator.SetFloat(ParameterIdLibrary.x, x); 
+        _animator.SetFloat(ParameterIdLibrary.z, z);
     }
 
     private void OnTriggerEnter(Collider other)
     {
         if (other.CompareTag("Key"))
         {
-            string color = other.gameObject.GetComponent<Key>().Color.ToString();
+            var color = other.gameObject.GetComponent<Key>().GetKeyColor();
             _keys.Add(color);
             _gameMenuController.UpdateKeyAmountOnHUD(color, true);
-            _anyKeyPicked = true;
+            AnyKeyPicked = true;
             CmdDestroyObject(other.gameObject);
         }
 
         else if (other.CompareTag("PressurePlate"))
         {
-            bool openStatus = other.gameObject.GetComponent<PressurePlateTrigger>()._isOpened;
+            var openStatus = other.gameObject.GetComponent<PressurePlateTrigger>().isOpened;
             other.GetComponent<Collider>().enabled = false;
             if (openStatus == false)
                 CmdPressureDoorOpen(other.gameObject);
@@ -95,27 +102,25 @@ public class Agent : NetworkBehaviour
     private void OnTriggerStay(Collider other)
     {
         // Open door on E button.
-        if (_isOpening && _useDoorFlag)
+        if (_isOpening && UseDoorFlag)
         {
             _isOpening = !_isOpening;
-            _useDoorFlag = !_useDoorFlag;
-            GameObject trigger = other.gameObject;
-            if (trigger.CompareTag("DoorTrigger"))
-            {
-                CmdOpenDoor(trigger);
-                CmdDestroyObject(trigger);
-            }
+            UseDoorFlag = !UseDoorFlag;
+            var trigger = other.gameObject;
+            if (!trigger.CompareTag("DoorTrigger")) return;
+            CmdOpenDoor(trigger);
+            CmdDestroyObject(trigger);
         }
         
         // Open door locked by key.
-        else if (_anyKeyPicked && _isOpening && _keyDoorFlag)
+        else if (AnyKeyPicked && _isOpening && KeyDoorFlag)
         {
             _gameMenuController.UpdateKeyAmountOnHUD(other.gameObject.GetComponent<DoorTrigger>().Color.ToString(), false);
             _keys.Remove(other.GetComponent<DoorTrigger>().Color.ToString());
             _isOpening = !_isOpening;
-            _anyKeyPicked = _keys.Count != 0;
-            _keyDoorFlag = !_keyDoorFlag;
-            GameObject trigger = other.gameObject;
+            AnyKeyPicked = _keys.Count != 0;
+            KeyDoorFlag = !KeyDoorFlag;
+            var trigger = other.gameObject;
             if (trigger.CompareTag("KeyDoorTrigger"))
             {
                 CmdOpenDoor(trigger);
@@ -124,10 +129,10 @@ public class Agent : NetworkBehaviour
         }
         
         // Disable laser.
-        else if (_isOpening && _offLaserFlag)
+        else if (_isOpening && DisableLaserFlag)
         {
             _isOpening = !_isOpening;
-            _offLaserFlag = !_offLaserFlag;
+            DisableLaserFlag = !DisableLaserFlag;
             CmdLaserToggleInitialize(other.gameObject);
         }
     }
@@ -135,9 +140,9 @@ public class Agent : NetworkBehaviour
     [Command]
     private void CmdLaserToggleInitialize(GameObject trigger) 
     {
-        LaserTrigger laserTrigger = trigger.GetComponent<LaserTrigger>();
+        var laserTrigger = trigger.GetComponent<LaserTrigger>();
         foreach (var laser in laserTrigger._laserObjects)
-            laser.GetComponent<Animator>().SetTrigger("Toggle");
+            laser.GetComponent<Animator>().SetTrigger(ParameterIdLibrary.toggle);
         // Logic for single laser toggle.
         //Animator anim = laserObject.GetComponent<Animator>();
         //anim.SetTrigger("Toggle");
@@ -148,30 +153,27 @@ public class Agent : NetworkBehaviour
     {
         trigger.GetComponent<Collider>().enabled = false;
         
-        PressurePlateTrigger doorTrigger = trigger.GetComponent<PressurePlateTrigger>();
-        GameObject door = doorTrigger._doorObject;
-        Animator anim = door.GetComponent<Animator>();
+        var doorTrigger = trigger.GetComponent<PressurePlateTrigger>();
+        var door = doorTrigger.GetDoorObject();
+        var anim = door.GetComponent<Animator>();
         
-        anim.SetTrigger("Open");
-        doorTrigger._isOpened = true;
+        anim.SetTrigger(ParameterIdLibrary.openTrigger);
+        doorTrigger.isOpened = true;
     }
 
     [Command]
     private void CmdOpenDoor(GameObject trigger)
     {
-        DoorTrigger doorTrigger = trigger.GetComponent<DoorTrigger>();
-        GameObject door = doorTrigger._doorObject;
-        Animator anim = door.GetComponent<Animator>();
+        var doorTrigger = trigger.GetComponent<DoorTrigger>();
+        var door = doorTrigger.GetDoorObject();
+        var anim = door.GetComponent<Animator>();
        
-        anim.SetTrigger("Open");
-        doorTrigger._isOpened = true;
+        anim.SetTrigger(ParameterIdLibrary.openTrigger);
+        doorTrigger.isOpened = true;
         
-        trigger.GetComponent<Message>()._hasCollided = false;
+        trigger.GetComponent<Message>().HasCollided = false;
     }
 
     [Command]
-    private void CmdDestroyObject(GameObject obj)
-    {
-        NetworkServer.Destroy(obj);
-    }
+    private void CmdDestroyObject(GameObject obj) => NetworkServer.Destroy(obj);
 }

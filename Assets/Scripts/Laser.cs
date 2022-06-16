@@ -22,9 +22,10 @@ public class Laser : NetworkBehaviour
 	{
 		if (other.CompareTag("Player") && other.gameObject.GetComponent<NetworkIdentity>().isLocalPlayer)
 		{
-			CharacterController characterController = other.gameObject.GetComponent<CharacterController>();
+			GameObject player;
+			var characterController = (player = other.gameObject).GetComponent<CharacterController>();
 			characterController.enabled = false;
-			other.gameObject.transform.position = _retryPointTransform.position;
+			player.transform.position = _retryPointTransform.position;
 			characterController.enabled = true;
 		}
 	}

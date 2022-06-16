@@ -3,6 +3,7 @@ using Mirror;
 
 public class PressurePlateTrigger : NetworkBehaviour
 {
-    [SerializeField] internal GameObject _doorObject;
-    internal bool _isOpened = false;
+    [SerializeField] private GameObject _doorObject;
+    public bool isOpened { get; set; }
+    public GameObject GetDoorObject() => _doorObject;
 }
